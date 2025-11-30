@@ -1,9 +1,11 @@
-import { pdfjs } from 'react-pdf';
-import { Document, Page } from 'react-pdf';
+import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Load react-pdf components only on the client to avoid SSR errors (pdfjs expects browser globals)
+const Document = dynamic(() => import('react-pdf').then((mod) => mod.Document), { ssr: false })
+const Page = dynamic(() => import('react-pdf').then((mod) => mod.Page), { ssr: false })
+
 
 export default function Explore() {
   const [resumes, setResumes] = useState([]);
@@ -17,6 +19,26 @@ export default function Explore() {
         console.error('Invalid response structure. Data may be missing.');
       }
     });
+  }, []);
+
+  // Set up pdfjs worker in the browser only
+  useEffect(() => {
+    (async () => {
+      if (typeof window === 'undefined') return
+
+      try {
+        const mod = await import('react-pdf')
+        const pdfjs = mod?.pdfjs || (mod?.default && mod.default.pdfjs)
+
+        if (pdfjs && typeof pdfjs === 'object') {
+          pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
+          return
+        }
+
+      } catch (err) {
+        console.error('Failed to set pdfjs workerSrc', err)
+      }
+    })()
   }, []);
 
   return (
@@ -37,23 +59,36 @@ export default function Explore() {
             </tr>
           </thead>
           <tbody>
-            {resumes?.map((item, index) => (
-              <tr>
-                <td className="border p-2">{item._id}</td>
-                <td className="border p-2">{item.description}</td>
-                <td className="border p-2">{item.likes}</td>
-                <td className="border p-2">{item.major_tag}</td>
+            {resumes?.map((item, index) => {
+              // Convert base64 to data URL for react-pdf in the browser
+              let fileProp = null
+              try {
+                if (typeof window !== 'undefined' && item.pdf_file) {
+                  fileProp = `data:application/pdf;base64,${item.pdf_file}`
+                }
+              } catch (e) {
+                console.error('Failed to prepare PDF file for display', e)
+              }
 
-                <td className="border p-2" style={{ padding: 0, margin: 0 }}>
-                <Document
-                  file={{ data: atob(item.pdf_file) }}
-                  onLoadSuccess={(pdfInfo) => console.log('PDF loaded', pdfInfo)}
-                >
-                  <Page pageNumber={1} renderTextLayer={false} renderAnnotationLayer={false} />
-                </Document>
-                </td>
-              </tr>
-            ))}
+              return (
+                <tr key={item._id || index}>
+                  <td className="border p-2">{item._id}</td>
+                  <td className="border p-2">{item.description}</td>
+                  <td className="border p-2">{item.likes}</td>
+                  <td className="border p-2">{item.major_tag}</td>
+
+                  <td className="border p-2" style={{ padding: 0, margin: 0 }}>
+                    {fileProp ? (
+                      <Document file={fileProp} onLoadSuccess={(pdfInfo) => console.log('PDF loaded', pdfInfo)}>
+                        <Page pageNumber={1} renderTextLayer={false} renderAnnotationLayer={false} />
+                      </Document>
+                    ) : (
+                      <div className="p-2">No PDF</div>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

@@ -34,6 +34,10 @@ class Item(BaseModel):
 
 mongodb_uri = os.getenv("URI")
 database_name = os.getenv("NAME")
+
+if os.getenv("URI") is None or os.getenv("NAME") is None:
+    print("Warning: MongoDB URI or database NAME not set in environment.")
+
 app = FastAPI()
 
 origins = ["http://localhost:3000"]
@@ -65,14 +69,20 @@ async def read_root():
 
 @app.get("/get-all")
 async def get_all_items():
-    collection = db["items"]
-    items = await collection.find().to_list(length=None)
+    try:
+        collection = db["items"]
+        items = await collection.find().to_list(length=None)
 
-    # Convert ObjectId to string
-    for item in items:
-        item["_id"] = str(item["_id"])
+        # Convert ObjectId to string
+        for item in items:
+            item["_id"] = str(item["_id"])
 
-    return items
+        return items
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        # Return a more helpful error message for debugging
+        raise HTTPException(status_code=500, detail=f"Server error when fetching items: {str(e)}")
 
 
 @app.get("/items/{item_id}")
