@@ -33,7 +33,7 @@ class Item(BaseModel):
     pdf_file: bytes  # Add this field to accept bytes for the PDF
 
 mongodb_uri = os.getenv("URI")
-database_name = os.getenv("NAME")
+database_name = os.getenv("DB_NAME")
 
 if os.getenv("URI") is None or os.getenv("NAME") is None:
     print("Warning: MongoDB URI or database NAME not set in environment.")

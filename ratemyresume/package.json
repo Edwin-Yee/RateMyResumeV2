@@ -16,7 +16,7 @@
     "blob-util": "^2.0.2",
     "cors": "^2.8.5",
     "disqus-react": "^1.1.7",
-    "mongodb": "^6.3.0",
+    "mongodb": "^6.21.0",
     "mongoose": "^8.0.4",
     "multer": "^1.4.5-lts.1",
     "next": "^14.2.33",
