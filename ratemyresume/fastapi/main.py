@@ -50,12 +50,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Create MongoDB client
-client = AsyncIOMotorClient(mongodb_uri)
-db = client[database_name]
-num_pages = None
-
+try: 
+    client = AsyncIOMotorClient(mongodb_uri)
+    db = client[database_name]
+    num_pages = None
+except TypeError as typeError:
+    print("Unable to read the DB_NAME from the .env file.")
 
 @app.get("/")
 async def read_root():
@@ -81,7 +82,6 @@ async def get_all_items():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        # Return a more helpful error message for debugging
         raise HTTPException(status_code=500, detail=f"Server error when fetching items: {str(e)}")
 
 
@@ -126,8 +126,7 @@ def extract_pdf(pdf_file_base64):
 @app.post("/create-item")
 async def create_item(item: Item):
     print("Create-item has been called!")
-    # Example: Insert item details into MongoDB
-    collection = db["items"]  # Replace "items" with your actual collection name
+    collection = db["items"]  # RateMyResume > RateMyResumeDB > items (collection)
     result = await collection.insert_one(item.dict())
 
     if result.inserted_id:
@@ -146,7 +145,7 @@ async def upload_file(file: UploadFile = File(...)):
     pdf_bytes = await write_new_pdf(file) 
     num_pages = len(text_reader.pages)
 
-    # Temporary comment out
+    # Temporary comment out TODO
     pii_words = ["Joe"]
     # pii_words = get_pii_words(pdf_text)
     # for word in pii_words:
@@ -155,7 +154,11 @@ async def upload_file(file: UploadFile = File(...)):
     redacted_pdf_bytes  = edit_pdf(pdf_bytes, pii_words)
 
     # Return the redacted PDF bytes as a response
-    return Response(content=redacted_pdf_bytes, media_type='application/pdf')
+    return Response(
+        content=redacted_pdf_bytes, 
+        media_type='application/pdf',
+        headers={"Content-Disposition": "attachment; filename = anonymized.pdf"}
+    )
 
 
 async def write_new_pdf(file):
