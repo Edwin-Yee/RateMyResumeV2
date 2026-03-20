@@ -25,21 +25,42 @@ export default function PdfPost() {
   }, []);
 
   const handlePostClick = async () => {
-    const response = await fetch(file);
-    const blob = await response.blob();
+    try {
+      const response = await fetch(file);
+      const blob = await response.blob();
 
-    const formData = new FormData();
-    formData.append('file', blob);
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64Pdf = reader.result.split(',')[1];
 
-    const result = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
+        // TODO update the pdf metadata
+        const mongodbData = {
+          id: 0,
+          major_tag: 'Art History',
+          description: 'Art History Resume',
+          likes: 0,
+          pdf_file: base64Pdf
+        };
 
-    if (result.ok) {
-      console.log('File uploaded successfully');
-    } else {
-      console.log('File upload failed');
+        const result = await fetch('http://127.0.0.1:8000/create-item', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(mongodbData),
+        });
+
+        if (result.ok) {
+          console.log('MongoDB update success');
+          router.push('/#explore');
+        } else {
+          console.error('MongoDB update failed');
+        }
+      };
+    } catch (error) {
+      console.error('Error posting resume:', error);
     }
   };
 
@@ -60,10 +81,12 @@ export default function PdfPost() {
         <button className="border-2 border-cyan-400 text-cyan-400 py-2 px-4 font-bold hover:bg-cyan-400 hover:text-black transition duration-200">
           Edit
         </button>
-        {/* TODO - Update the Post button to call a post endpoint to update mongodb  */}
-        <Link href="/#explore" className="border-2 border-cyan-400 text-cyan-400 py-2 px-4 font-bold hover:bg-cyan-400 hover:text-black transition duration-200">
+        <button 
+          onClick={handlePostClick}
+          className="border-2 border-cyan-400 text-cyan-400 py-2 px-4 font-bold hover:bg-cyan-400 hover:text-black transition duration-200"
+        >
           Post
-        </Link>
+        </button>
       </div>
     </div>
   );
