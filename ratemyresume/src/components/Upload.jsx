@@ -24,31 +24,6 @@ export default function WelcomePage() {
     const pdfBytes = await uploadResponse.arrayBuffer();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
-    const base64Pdf = Buffer.from(pdfBytes).toString('base64'); // Convert to base64
-
-    console.log("pdfBytes" + pdfBytes)
-    let mongodbData = {
-      id: 0,
-      major_tag: 'Art History',
-      description: 'Art History Resume',
-      likes: 0,
-      pdf_file: base64Pdf
-    };
-
-    const mongodbResponse = await fetch('http://127.0.0.1:8000/create-item', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(mongodbData),
-    });
-
-    if (!mongodbResponse.ok) {
-      console.error('Error updating MongoDB:', mongodbResponse.statusText);
-      return;
-    } else {
-      console.log('MongoDB update success:' + mongodbResponse.statusText)
-    } 
 
     // Navigate to the PdfView page with the URL of the redacted PDF as a query parameter
     router.push({
